@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A5;
+    margin: 8mm;
+  }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #111;
+    font-size: 10px;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0;
+  }
+  .header {
+    text-align: center;
+    border-bottom: 2px solid #1a3a6b;
+    padding-bottom: 5px;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 14px;
+    margin: 0;
+    color: #1a3a6b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .header h2 {
+    font-size: 11px;
+    margin: 2px 0 0 0;
+    color: #333;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .receipt-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    margin-bottom: 8px;
+    background-color: #f2f2f2;
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+  }
+  .receipt-meta div {
+    font-weight: bold;
+  }
+  .section-title {
+    background-color: #1a3a6b;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 9px;
+    padding: 3px 6px;
+    margin-top: 8px;
+    margin-bottom: 5px;
+  }
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 8px;
+  }
+  .info-table td {
+    padding: 4px 6px;
+    border: 1px solid #ddd;
+    vertical-align: top;
+  }
+  .label {
+    font-weight: bold;
+    color: #333;
+    width: 25%;
+    background-color: #fafafa;
+  }
+  .value {
+    width: 25%;
+  }
+  .amount-section {
+    border: 2px solid #1a3a6b;
+    background-color: #f4f7fa;
+    padding: 8px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  .amount-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1a3a6b;
+    margin: 5px 0;
+  }
+  .signature-area {
+    margin-top: 25px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .sig-block {
+    text-align: center;
+    font-size: 9px;
+    width: 150px;
+  }
+  .sig-line {
+    border-top: 1px solid #333;
+    margin-top: 30px;
+    padding-top: 3px;
+  }
+  .note {
+    font-size: 8px;
+    color: #666;
+    margin-top: 15px;
+    text-align: center;
+    border-top: 1px dashed #ccc;
+    padding-top: 5px;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Rajasthan Jal Board (PHED)</h1>
+    <h2>Payment Receipt</h2>
+  </div>
+
+  <div class="receipt-meta">
+    <div>Receipt No: {{receipt_number}}</div>
+    <div>Date: {{entry_date}}</div>
+  </div>
+
+  <div class="section-title">Consumer Details</div>
+  <table class="info-table">
+    <tr>
+      <td class="label">CIN No.</td>
+      <td class="value" style="font-weight: bold;">{{cin_no}}</td>
+      <td class="label">Name</td>
+      <td class="value">{{name}}</td>
+    </tr>
+    <tr>
+      <td class="label">Zone</td>
+      <td class="value">{{zone}}</td>
+      <td class="label">Category</td>
+      <td class="value">{{category}}</td>
+    </tr>
+    <tr>
+      <td class="label">Address</td>
+      <td class="value" colspan="3">{{address}}</td>
+    </tr>
+  </table>
+
+  <div class="section-title">Payment details</div>
+  <table class="info-table">
+    <tr>
+      <td class="label">Payment Mode</td>
+      <td class="value">{{payment_mode}}</td>
+      <td class="label">Payment Date</td>
+      <td class="value">{{payment_date}}</td>
+    </tr>
+    <tr>
+      <td class="label">Billing Cycle</td>
+      <td class="value">{{cycle_period}}</td>
+      <td class="label">E-Mitra Transaction Key</td>
+      <td class="value">{{emitra_key}}</td>
+    </tr>
+    <tr>
+      <td class="label">Notes / Remarks</td>
+      <td class="value" colspan="3">{{notes}}</td>
+    </tr>
+  </table>
+
+  <div class="amount-section">
+    <div style="font-size: 10px; font-weight: bold; text-transform: uppercase;">Amount Received</div>
+    <div class="amount-value">{{amount}}</div>
+    <div style="font-size: 9px; font-weight: bold; color: #555;">
+      Outstanding Balance after Payment: <span style="color: #c0392b;">{{outstanding}}</span> | 
+      Credit Balance: <span style="color: #2a7a2a;">{{credit}}</span>
+    </div>
+  </div>
+
+  <div class="signature-area">
+    <div class="sig-block">
+      <div>Received By: {{received_by}}</div>
+      <div class="sig-line">Authorised Signatory<br>Rajasthan Jal Board</div>
+    </div>
+  </div>
+
+  <div class="note">
+    This is a computer-generated receipt and does not require a physical signature. Please retain it for your records.
+  </div>
+</body>
+</html>

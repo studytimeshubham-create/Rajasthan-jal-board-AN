@@ -1,0 +1,186 @@
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import openpyxl
+import json
+from datetime import datetime
+
+def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
+    frame = ttk.Frame(parent)
+    
+    # Title
+    ttk.Label(frame, text="Security Audit Logs Explorer", style="Header.TLabel", foreground="#1a3a6b").pack(anchor="w", pady=(0, 10))
+    ttk.Label(frame, text="Tracks administrative changes. Double-click a row to inspect full state changes (Old vs New values).").pack(anchor="w", pady=(0, 15))
+    
+    # Filters
+    f_frame = ttk.Frame(frame, padding=5)
+    f_frame.pack(fill="x", pady=(0, 10))
+    
+    ttk.Label(f_frame, text="Date From:").pack(side="left", padx=3)
+    from_ent = ttk.Entry(f_frame, width=10)
+    from_ent.pack(side="left", padx=3)
+    from_ent.insert(0, utils.today_str())
+    
+    ttk.Label(f_frame, text="Date To:").pack(side="left", padx=3)
+    to_ent = ttk.Entry(f_frame, width=10)
+    to_ent.pack(side="left", padx=3)
+    to_ent.insert(0, utils.today_str())
+    
+    ttk.Label(f_frame, text="Action:").pack(side="left", padx=3)
+    action_var = tk.StringVar(value="All")
+    # Define common actions
+    actions_options = ["All", "CREATE_CONSUMER", "UPDATE_CONSUMER", "DEACTIVATE_CONSUMER", "REACTIVATE_CONSUMER", "CREATE_BILLING_CYCLE", "CLOSE_BILLING_CYCLE", "ADMIN_UPDATE_READING", "APPROVE_CORRECTION_QUERY", "REJECT_CORRECTION_QUERY", "RECORD_PAYMENT", "LPS_WAIVER", "ADD_CUSTOM_ADJUSTMENT", "RECORD_METER_REPLACEMENT", "UPDATE_CHARGES_CONFIG", "CREATE_METER_READER", "UPDATE_METER_READER", "DEACTIVATE_METER_READER", "RESET_METER_READER_PASSWORD"]
+    action_cb = ttk.Combobox(f_frame, textvariable=action_var, values=actions_options, width=18, state="readonly")
+    action_cb.pack(side="left", padx=3)
+    
+    ttk.Label(f_frame, text="Admin:").pack(side="left", padx=3)
+    admin_ent = ttk.Entry(f_frame, width=12)
+    admin_ent.pack(side="left", padx=3)
+    
+    # Grid treeview
+    tree_columns = ("timestamp", "action", "by", "target", "old_val", "new_val")
+    tree = ttk.Treeview(frame, columns=tree_columns, show="headings")
+    tree.heading("timestamp", text="Timestamp")
+    tree.heading("action", text="Action Type")
+    tree.heading("by", text="Performed By")
+    tree.heading("target", text="Target Doc")
+    tree.heading("old_val", text="Old Value (Truncated)")
+    tree.heading("new_val", text="New Value (Truncated)")
+    
+    tree.column("timestamp", width=120, anchor="center")
+    tree.column("action", width=150, anchor="center")
+    tree.column("by", width=100)
+    tree.column("target", width=150)
+    tree.column("old_val", width=180)
+    tree.column("new_val", width=180)
+    
+    scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side="top", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+    
+    logs_cache = {}
+    
+    def refresh_logs():
+        for r in tree.get_children():
+            tree.delete(r)
+            
+        act_f = action_var.get()
+        adm_f = admin_ent.get().strip()
+        
+        filters = {
+            "date_from": from_ent.get().strip(),
+            "date_to": to_ent.get().strip()
+        }
+        if act_f != "All":
+            filters["action_type"] = act_f
+        if adm_f:
+            filters["performed_by"] = adm_f
+            
+        def fetch():
+            return fc.get_audit_log(filters)
+            
+        def done(logs):
+            for l in logs:
+                logs_cache[l["log_id"]] = l
+                # Truncate old/new values for table display
+                old_trunc = str(l.get("old_value") or "")
+                if len(old_trunc) > 50: old_trunc = old_trunc[:47] + "..."
+                
+                new_trunc = str(l.get("new_value") or "")
+                if len(new_trunc) > 50: new_trunc = new_trunc[:47] + "..."
+                
+                # Format timestamp
+                ts = l.get("timestamp")
+                if ts:
+                    if hasattr(ts, "datetime"):
+                        ts_str = ts.datetime.strftime("%d-%m-%Y %H:%M:%S")
+                    else:
+                        ts_str = datetime.fromisoformat(ts).strftime("%d-%m-%Y %H:%M:%S")
+                else:
+                    ts_str = "—"
+                    
+                tree.insert("", "end", values=(
+                    ts_str,
+                    l["action_type"],
+                    l.get("performed_by_name"),
+                    l.get("target_document"),
+                    old_trunc,
+                    new_trunc
+                ), iid=l["log_id"])
+                
+        utils.run_in_thread(fetch, callback=done, widget=frame)
+
+    ttk.Button(f_frame, text="🔄 Load / Refresh", command=refresh_logs).pack(side="left", padx=15)
+    
+    def export_excel():
+        path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel Files", "*.xlsx")], title="Save Audit Log")
+        if not path:
+            return
+        def run():
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Audit Log"
+            ws.append(["Timestamp", "Action Type", "Performed By", "Target Document", "Old Value JSON", "New Value JSON"])
+            for l_id, l in logs_cache.items():
+                ts = l.get("timestamp")
+                ts_str = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+                ws.append([
+                    ts_str,
+                    l["action_type"],
+                    l.get("performed_by_name"),
+                    l.get("target_document"),
+                    json.dumps(l.get("old_value")),
+                    json.dumps(l.get("new_value"))
+                ])
+            wb.save(path)
+        def done(res): messagebox.showinfo("Success", "Spreadsheet saved.", parent=frame)
+        utils.run_in_thread(run, callback=done, widget=frame)
+        
+    ttk.Button(f_frame, text="📤 Export Excel", command=export_excel).pack(side="right", padx=5)
+    
+    # Double click details popup
+    def on_row_double_click(event):
+        sel = tree.selection()
+        if not sel:
+            return
+        log_id = sel[0]
+        l = logs_cache.get(log_id)
+        if not l:
+            return
+            
+        dlg = tk.Toplevel(frame)
+        dlg.title(f"Log Inspection — {log_id}")
+        dlg.geometry("600x450")
+        dlg.grab_set()
+        
+        f = ttk.Frame(dlg, padding=15)
+        f.pack(fill="both", expand=True)
+        
+        ttk.Label(f, text=f"Audit Log ID: {log_id}", font=("Segoe UI", 11, "bold"), foreground="#1a3a6b").pack(anchor="w")
+        ttk.Label(f, text=f"Action: {l['action_type']} | Performed By: {l.get('performed_by_name')}").pack(anchor="w", pady=(0, 10))
+        
+        # Grid for old vs new textboxes
+        text_f = ttk.Frame(f)
+        text_f.pack(fill="both", expand=True, pady=10)
+        
+        text_f.grid_columnconfigure(0, weight=1)
+        text_f.grid_columnconfigure(1, weight=1)
+        text_f.grid_rowconfigure(1, weight=1)
+        
+        ttk.Label(text_f, text="State BEFORE Change (Old Value)", font=("Segoe UI", 9, "bold")).grid(row=0, column=0, sticky="w")
+        old_txt = tk.Text(text_f, wrap="word", font=("Courier New", 9))
+        old_txt.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        old_txt.insert("1.0", json.dumps(l.get("old_value"), indent=2) if l.get("old_value") is not None else "None / Empty")
+        old_txt.config(state="disabled")
+        
+        ttk.Label(text_f, text="State AFTER Change (New Value)", font=("Segoe UI", 9, "bold")).grid(row=0, column=1, sticky="w")
+        new_txt = tk.Text(text_f, wrap="word", font=("Courier New", 9))
+        new_txt.grid(row=1, column=1, sticky="nsew", padx=5, pady=5)
+        new_txt.insert("1.0", json.dumps(l.get("new_value"), indent=2) if l.get("new_value") is not None else "None / Empty")
+        new_txt.config(state="disabled")
+        
+    tree.bind("<Double-1>", on_row_double_click)
+    
+    # We do NOT run refresh_logs() initially (Firestore cost efficiency)
+    
+    return frame

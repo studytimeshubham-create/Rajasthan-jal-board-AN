@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rajasthan Jal Board - Search Consumer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">💧 RJB Mobile</div>
+    <div class="header-user">
+      <span id="header-user-name">Reader</span>
+      <button id="logout-btn" class="logout-btn">Logout</button>
+    </div>
+  </header>
+
+  <!-- Content Container -->
+  <div class="container">
+    <div style="margin-top: 15px; margin-bottom: 20px;">
+      <h1 style="font-size: 1.5rem; color: var(--primary); font-weight: bold;">Search Consumer</h1>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Search by CIN or Meter Serial Number to input readings or view records.</p>
+    </div>
+
+    <!-- Search Card -->
+    <div class="card">
+      <div id="alert-container"></div>
+      
+      <form id="search-form">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <input type="text" id="search-query" placeholder="Enter CIN No or Meter Serial" inputmode="text" style="text-align: center; font-weight: bold; text-transform: uppercase;" required>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn btn-primary" style="flex: 2;">Search</button>
+          <button type="button" id="clear-btn" class="btn btn-secondary" style="flex: 1;">Clear</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Results Panel -->
+    <div id="results-panel" class="card" style="display: none;">
+      <h2>Consumer Found</h2>
+      
+      <div id="status-alert-container"></div>
+
+      <div class="info-panel">
+        <div>
+          <span class="info-label">Name</span>
+          <span id="res-name" class="info-value"></span>
+        </div>
+        <div>
+          <span class="info-label">CIN No</span>
+          <span id="res-cin" class="info-value"></span>
+        </div>
+        <div>
+          <span class="info-label">Zone</span>
+          <span id="res-zone" class="info-value"></span>
+        </div>
+        <div>
+          <span class="info-label">Category</span>
+          <span id="res-category" class="info-value"></span>
+        </div>
+        <div>
+          <span class="info-label">Meter Size</span>
+          <span id="res-meter-size" class="info-value"></span>
+        </div>
+        <div>
+          <span class="info-label">Meter Serial</span>
+          <span id="res-meter-serial" class="info-value"></span>
+        </div>
+        <div>
+          <span class="info-label">Last Reading</span>
+          <span id="res-last-reading" class="info-value" style="font-weight: bold; color: var(--primary);"></span>
+        </div>
+        <div>
+          <span class="info-label">Status</span>
+          <span id="res-status" class="info-value"></span>
+        </div>
+        <div style="grid-column: span 2;">
+          <span class="info-label">Address</span>
+          <span id="res-address" class="info-value"></span>
+        </div>
+      </div>
+
+      <div class="balance-row" style="margin-bottom: 20px;">
+        <div>
+          <span class="info-label">Outstanding Balance</span>
+          <span id="res-outstanding" class="info-value" style="color: var(--danger); font-weight: bold;"></span>
+        </div>
+        <div style="text-align: right;">
+          <span class="info-label">Credit Balance</span>
+          <span id="res-credit" class="info-value" style="color: var(--success); font-weight: bold;"></span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+        <div id="reading-action-container"></div>
+        <button id="view-ledger-btn" class="btn btn-secondary">View Ledger</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="nav-bar">
+    <a href="search.html" class="nav-item active">
+      <span class="nav-icon">🔍</span>
+      <span>Search</span>
+    </a>
+    <a href="ledger.html" class="nav-item">
+      <span class="nav-icon">📖</span>
+      <span>Ledger</span>
+    </a>
+    <a href="my-readings.html" class="nav-item">
+      <span class="nav-icon">📋</span>
+      <span>My Readings</span>
+    </a>
+  </nav>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-spinner-overlay" style="display: none;">
+    <div style="text-align: center;">
+      <div class="spinner"></div>
+      <p style="margin-top: 12px; font-weight: bold; color: var(--primary);">Searching...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase_config.js";
+    import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    import { formatCurrency, formatKL } from "./billing-engine.js";
+
+    const searchForm = document.getElementById("search-form");
+    const searchQuery = document.getElementById("search-query");
+    const clearBtn = document.getElementById("clear-btn");
+    const alertContainer = document.getElementById("alert-container");
+    const resultsPanel = document.getElementById("results-panel");
+    const loadingOverlay = document.getElementById("loading-overlay");
+    const logoutBtn = document.getElementById("logout-btn");
+    const statusAlertContainer = document.getElementById("status-alert-container");
+
+    let currentConsumer = null;
+
+    // Check Auth State and load active zones
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+      
+      const profileStr = sessionStorage.getItem("meter_reader_profile");
+      if (profileStr) {
+        const profile = JSON.parse(profileStr);
+        document.getElementById("header-user-name").textContent = profile.name;
+      } else {
+        // Fallback if session storage was cleared
+        loadingOverlay.style.display = "flex";
+        try {
+          const docSnap = await getDoc(doc(db, "meter_readers", user.uid));
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            sessionStorage.setItem("meter_reader_profile", JSON.stringify({
+              uid: user.uid,
+              name: data.name || "Meter Reader",
+              employee_id: data.employee_id || "",
+              zone: data.zone || null
+            }));
+            document.getElementById("header-user-name").textContent = data.name;
+          }
+        } catch(e) {
+          console.error(e);
+        }
+        loadingOverlay.style.display = "none";
+      }
+
+      // Live reload of active zones from Firestore
+      refreshActiveZones();
+    });
+
+    async function refreshActiveZones() {
+      try {
+        const billingCyclesRef = collection(db, "billing_cycles");
+        const openCyclesQuery = query(billingCyclesRef, where("status", "==", "open"));
+        const openCyclesSnapshot = await getDocs(openCyclesQuery);
+        
+        let activeZones = [];
+        openCyclesSnapshot.forEach((doc) => {
+          const cycleData = doc.data();
+          if (cycleData.zones && Array.isArray(cycleData.zones)) {
+            activeZones = activeZones.concat(cycleData.zones);
+          }
+        });
+        
+        activeZones = [...new Set(activeZones.map(z => parseInt(z)))];
+        sessionStorage.setItem("active_zones", JSON.stringify(activeZones));
+      } catch (error) {
+        console.error("Error refreshing active zones:", error);
+      }
+    }
+
+    // Logout Functionality
+    logoutBtn.addEventListener("click", async () => {
+      loadingOverlay.style.display = "flex";
+      try {
+        await signOut(auth);
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      } catch (error) {
+        console.error("Logout error:", error);
+      }
+      loadingOverlay.style.display = "none";
+    });
+
+    function showAlert(message, type = "danger") {
+      alertContainer.innerHTML = `
+        <div class="alert alert-${type}">
+          <span>${message}</span>
+        </div>
+      `;
+    }
+
+    function clearAlert() {
+      alertContainer.innerHTML = "";
+    }
+
+    clearBtn.addEventListener("click", () => {
+      searchQuery.value = "";
+      clearAlert();
+      resultsPanel.style.display = "none";
+      currentConsumer = null;
+    });
+
+    searchForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearAlert();
+      resultsPanel.style.display = "none";
+      statusAlertContainer.innerHTML = "";
+
+      const queryVal = searchQuery.value.trim().toUpperCase();
+      if (!queryVal) {
+        showAlert("Please enter a CIN No or Meter Serial Number.", "danger");
+        return;
+      }
+
+      loadingOverlay.style.display = "flex";
+
+      try {
+        // 1. Try CIN Direct Lookup
+        const cinDocRef = doc(db, "consumers", queryVal);
+        let consumerDoc = await getDoc(cinDocRef);
+        
+        // 2. If not found, try searching by Meter Serial No
+        if (!consumerDoc.exists()) {
+          const consumersRef = collection(db, "consumers");
+          const q = query(consumersRef, where("meter_serial_no", "==", queryVal));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            consumerDoc = querySnapshot.docs[0];
+          }
+        }
+
+        if (!consumerDoc.exists()) {
+          loadingOverlay.style.display = "none";
+          showAlert("No consumer found matching that CIN or Meter Serial Number.", "danger");
+          return;
+        }
+
+        // Display results
+        currentConsumer = consumerDoc.data();
+        // Set CIN in the data if it's retrieved via collection query
+        if (!currentConsumer.cin_no) {
+          currentConsumer.cin_no = consumerDoc.id;
+        }
+
+        document.getElementById("res-name").textContent = currentConsumer.name || "—";
+        document.getElementById("res-cin").textContent = currentConsumer.cin_no || "—";
+        document.getElementById("res-zone").textContent = currentConsumer.zone || "—";
+        document.getElementById("res-category").textContent = currentConsumer.category || "—";
+        document.getElementById("res-meter-size").textContent = currentConsumer.meter_size || "—";
+        document.getElementById("res-meter-serial").textContent = currentConsumer.meter_serial_no || "—";
+        document.getElementById("res-last-reading").textContent = formatKL(currentConsumer.last_reading || currentConsumer.initial_meter_reading || 0);
+        document.getElementById("res-status").textContent = currentConsumer.consumer_status || "—";
+        
+        const addressText = [
+          currentConsumer.address_area_location,
+          currentConsumer.address_landmark,
+          currentConsumer.address_pin_code ? `PIN: ${currentConsumer.address_pin_code}` : ""
+        ].filter(Boolean).join(", ");
+        document.getElementById("res-address").textContent = addressText || "—";
+
+        document.getElementById("res-outstanding").textContent = formatCurrency(currentConsumer.outstanding_balance || 0);
+        document.getElementById("res-credit").textContent = formatCurrency(currentConsumer.credit_balance || 0);
+
+        // Warning banner if status is not Active
+        if (currentConsumer.consumer_status !== "Active") {
+          statusAlertContainer.innerHTML = `
+            <div class="alert alert-warning">
+              <span>⚠️ Status Warning: This consumer's account is marked as <strong>${currentConsumer.consumer_status}</strong>.</span>
+            </div>
+          `;
+        }
+
+        // Enforce active zone check
+        const activeZones = JSON.parse(sessionStorage.getItem("active_zones") || "[]");
+        const isZoneActive = activeZones.includes(parseInt(currentConsumer.zone));
+        const actionContainer = document.getElementById("reading-action-container");
+
+        if (isZoneActive) {
+          actionContainer.innerHTML = `
+            <button id="enter-reading-btn" class="btn btn-primary">Enter Reading</button>
+          `;
+          document.getElementById("enter-reading-btn").addEventListener("click", () => {
+            window.location.href = `reading.html?cin=${currentConsumer.cin_no}`;
+          });
+        } else {
+          actionContainer.innerHTML = `
+            <button class="btn zone-warning" disabled>No Active Cycle — Zone ${currentConsumer.zone}</button>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 4px;">
+              Reading entry is only available when a billing cycle is active for this zone.
+            </p>
+          `;
+        }
+
+        resultsPanel.style.display = "block";
+      } catch (error) {
+        console.error("Search error:", error);
+        showAlert("An error occurred while fetching consumer details. Please try again.", "danger");
+      }
+
+      loadingOverlay.style.display = "none";
+    });
+
+    document.getElementById("view-ledger-btn").addEventListener("click", () => {
+      if (currentConsumer) {
+        window.location.href = `ledger.html?cin=${currentConsumer.cin_no}`;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #111;
+    font-size: 10px;
+    line-height: 1.4;
+    margin: 0;
+    padding: 0;
+  }
+  .header {
+    text-align: center;
+    border-bottom: 3px solid #1a3a6b;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+  }
+  .header h1 {
+    font-size: 18px;
+    margin: 0;
+    color: #1a3a6b;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .header h2 {
+    font-size: 12px;
+    margin: 3px 0 0 0;
+    color: #444;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .section-title {
+    background-color: #1a3a6b;
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 10px;
+    padding: 4px 8px;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+  }
+  .info-table td {
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    vertical-align: top;
+  }
+  .label {
+    font-weight: bold;
+    color: #333;
+    width: 20%;
+    background-color: #f7f7f7;
+  }
+  .value {
+    width: 30%;
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+  }
+  .data-table th {
+    background-color: #f2f2f2;
+    border: 1px solid #ddd;
+    font-weight: bold;
+    text-align: left;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+  .data-table td {
+    border: 1px solid #ddd;
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+  .data-table tr:nth-child(even) {
+    background-color: #fafafa;
+  }
+  .summary-box {
+    border: 2px solid #1a3a6b;
+    background-color: #f4f7fa;
+    padding: 10px;
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+  .summary-item {
+    text-align: center;
+  }
+  .summary-label {
+    font-size: 9px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #555;
+  }
+  .summary-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1a3a6b;
+  }
+  .footer {
+    margin-top: 30px;
+    border-top: 1px solid #ccc;
+    padding-top: 5px;
+    text-align: center;
+    font-size: 8px;
+    color: #666;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Rajasthan Jal Board (PHED)</h1>
+    <h2>Consumer Ledger & History Statement</h2>
+  </div>
+
+  <div class="section-title">Consumer Profile Information</div>
+  <table class="info-table">
+    <tr>
+      <td class="label">CIN No.</td>
+      <td class="value" style="font-weight: bold; font-size: 11px;">{{cin_no}}</td>
+      <td class="label">Meter Serial No.</td>
+      <td class="value" style="font-weight: bold; font-size: 11px;">{{meter_serial_no}}</td>
+    </tr>
+    <tr>
+      <td class="label">Name</td>
+      <td class="value">{{name}}</td>
+      <td class="label">Category</td>
+      <td class="value">{{category}}</td>
+    </tr>
+    <tr>
+      <td class="label">Meter Size</td>
+      <td class="value">{{meter_size}}</td>
+      <td class="label">APL / BPL Status</td>
+      <td class="value">{{apl_bpl}}</td>
+    </tr>
+    <tr>
+      <td class="label">Contact No.</td>
+      <td class="value">{{contact_number}}</td>
+      <td class="label">Aadhaar / PHED ID</td>
+      <td class="value">{{aadhaar_phed_no}}</td>
+    </tr>
+    <tr>
+      <td class="label">Address</td>
+      <td class="value" colspan="3">{{address}}<br>Landmark: {{address_landmark}} | PIN: {{address_pin_code}}</td>
+    </tr>
+    <tr>
+      <td class="label">GPS Coordinates</td>
+      <td class="value">{{address_latitude}}, {{address_longitude}}</td>
+      <td class="label">Consumer Status</td>
+      <td class="value">{{consumer_status}}</td>
+    </tr>
+  </table>
+
+  <div class="section-title">Verified Readings & Billing History</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Date & Time</th>
+        <th>Cycle</th>
+        <th>Reader</th>
+        <th>Prev (KL)</th>
+        <th>Curr (KL)</th>
+        <th>Consumption (KL)</th>
+        <th>Net Bill Amount</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{readings_rows}}
+    </tbody>
+  </table>
+
+  <div class="section-title">Payments Log</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Receipt Number</th>
+        <th>Payment Date</th>
+        <th>Entry Date</th>
+        <th>Payment Mode</th>
+        <th>E-Mitra Key</th>
+        <th>Collected By</th>
+        <th>Amount Paid</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{payments_rows}}
+    </tbody>
+  </table>
+
+  <div class="section-title">Custom Adjustments & Waivers</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Adjustment Type</th>
+        <th>Billing Cycle</th>
+        <th>Reason / Notes</th>
+        <th>Applied By</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{adjustments_rows}}
+    </tbody>
+  </table>
+
+  <div class="section-title">Meter Replacement History</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Replacement Date</th>
+        <th>Old Serial No.</th>
+        <th>New Serial No.</th>
+        <th>New Initial Reading</th>
+        <th>Recorded By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{replacements_rows}}
+    </tbody>
+  </table>
+
+  <div class="section-title">Account Summary Balance</div>
+  <div class="summary-box">
+    <div class="summary-item">
+      <div class="summary-label">Total Outstanding Balance</div>
+      <div class="summary-value" style="color: #c0392b;">{{outstanding_balance}}</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-label">Available Credit Balance</div>
+      <div class="summary-value" style="color: #2a7a2a;">{{credit_balance}}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    This statement shows verified records up to {{print_date}} {{print_time}}. Created by Rajasthan Jal Board PHED System.
+  </div>
+</body>
+</html>

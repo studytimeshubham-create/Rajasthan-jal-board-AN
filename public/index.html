@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rajasthan Jal Board - Meter Reader Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body style="padding-top: 20px; padding-bottom: 20px;">
+
+  <div class="container">
+    <div style="text-align: center; margin-bottom: 30px; margin-top: 20px;">
+      <div style="font-size: 3rem; margin-bottom: 10px;">💧</div>
+      <h1 style="color: var(--primary); font-size: 1.6rem; font-weight: bold; margin-bottom: 4px;">RAJASTHAN JAL BOARD</h1>
+      <p style="color: var(--accent); font-weight: bold; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase;">Consumer Management & Billing System</p>
+    </div>
+
+    <div class="card">
+      <h2 style="text-align: center; border-bottom: none; margin-bottom: 20px;">Meter Reader Login</h2>
+
+      <div id="alert-container"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username / Email</label>
+          <input type="text" id="username" placeholder="Enter username or email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" id="login-btn" class="btn btn-primary" style="margin-top: 10px;">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-spinner-overlay" style="display: none;">
+    <div style="text-align: center;">
+      <div class="spinner"></div>
+      <p style="margin-top: 12px; font-weight: bold; color: var(--primary);">Authenticating & Loading Data...</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase_config.js";
+    import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+    import { doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const loginForm = document.getElementById("login-form");
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("login-btn");
+    const alertContainer = document.getElementById("alert-container");
+    const loadingOverlay = document.getElementById("loading-overlay");
+
+    let lockoutTimer = null;
+
+    // Check if already logged in and session is cached
+    onAuthStateChanged(auth, (user) => {
+      if (user && sessionStorage.getItem("meter_reader_profile")) {
+        window.location.href = "search.html";
+      }
+    });
+
+    // Check rate limit on page load
+    checkLockout();
+
+    function showAlert(message, type = "danger") {
+      alertContainer.innerHTML = `
+        <div class="alert alert-${type}">
+          <span>${message}</span>
+        </div>
+      `;
+    }
+
+    function clearAlert() {
+      alertContainer.innerHTML = "";
+    }
+
+    function getAttempts() {
+      try {
+        return JSON.parse(localStorage.getItem("login_attempts")) || { count: 0, firstAttemptTime: null };
+      } catch (e) {
+        return { count: 0, firstAttemptTime: null };
+      }
+    }
+
+    function saveAttempts(attempts) {
+      localStorage.setItem("login_attempts", JSON.stringify(attempts));
+    }
+
+    function checkLockout() {
+      const attempts = getAttempts();
+      if (attempts.count >= 5) {
+        const elapsed = Date.now() - attempts.firstAttemptTime;
+        const lockoutDuration = 15 * 60 * 1000; // 15 minutes
+
+        if (elapsed < lockoutDuration) {
+          const remaining = lockoutDuration - elapsed;
+          startLockoutCountdown(remaining);
+          return true;
+        } else {
+          // Lockout period expired
+          saveAttempts({ count: 0, firstAttemptTime: null });
+          enableForm();
+        }
+      }
+      return false;
+    }
+
+    function startLockoutCountdown(durationMs) {
+      disableForm();
+      if (lockoutTimer) clearInterval(lockoutTimer);
+
+      function updateCountdown() {
+        const elapsed = Date.now() - getAttempts().firstAttemptTime;
+        const remaining = 15 * 60 * 1000 - elapsed;
+
+        if (remaining <= 0) {
+          clearInterval(lockoutTimer);
+          saveAttempts({ count: 0, firstAttemptTime: null });
+          clearAlert();
+          enableForm();
+        } else {
+          const mins = Math.floor(remaining / 60000);
+          const secs = Math.floor((remaining % 60000) / 1000);
+          showAlert(`Too many failed login attempts. Locked out. Try again in ${mins}m ${secs}s.`, "danger");
+        }
+      }
+
+      updateCountdown();
+      lockoutTimer = setInterval(updateCountdown, 1000);
+    }
+
+    function disableForm() {
+      usernameInput.disabled = true;
+      passwordInput.disabled = true;
+      loginBtn.disabled = true;
+    }
+
+    function enableForm() {
+      usernameInput.disabled = false;
+      passwordInput.disabled = false;
+      loginBtn.disabled = false;
+    }
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      if (checkLockout()) return;
+
+      let email = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      if (auth.app.options.apiKey === "YOUR_API_KEY" || auth.app.options.projectId === "YOUR_PROJECT_ID") {
+        showAlert("Firebase web config is still using placeholder values. Update public/firebase_config.js first.", "danger");
+        return;
+      }
+
+      if (!email.includes("@")) {
+        email = email + "@rjb.local";
+      }
+
+      loadingOverlay.style.display = "flex";
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 1. Fetch meter reader document to verify is_active status
+        const readerDocRef = doc(db, "meter_readers", user.uid);
+        const readerDoc = await getDoc(readerDocRef);
+
+        if (!readerDoc.exists()) {
+          loadingOverlay.style.display = "none";
+          showAlert("Meter Reader record not found in system.", "danger");
+          await signOut(auth);
+          recordFailedAttempt();
+          return;
+        }
+
+        const readerData = readerDoc.data();
+        if (!readerData.is_active) {
+          loadingOverlay.style.display = "none";
+          showAlert("Your account has been deactivated. Contact admin.", "danger");
+          await signOut(auth);
+          recordFailedAttempt();
+          return;
+        }
+
+        // 2. Fetch charges configuration
+        const chargesConfigRef = doc(db, "charges_config", "current");
+        const chargesConfigDoc = await getDoc(chargesConfigRef);
+        
+        if (!chargesConfigDoc.exists()) {
+          loadingOverlay.style.display = "none";
+          showAlert("Charges configuration not found. Please contact admin.", "danger");
+          await signOut(auth);
+          return;
+        }
+
+        // 3. Fetch active billing cycles to get active zones
+        const billingCyclesRef = collection(db, "billing_cycles");
+        const openCyclesQuery = query(billingCyclesRef, where("status", "==", "open"));
+        const openCyclesSnapshot = await getDocs(openCyclesQuery);
+        
+        let activeZones = [];
+        openCyclesSnapshot.forEach((doc) => {
+          const cycleData = doc.data();
+          if (cycleData.zones && Array.isArray(cycleData.zones)) {
+            activeZones = activeZones.concat(cycleData.zones);
+          }
+        });
+        
+        // Remove duplicates
+        activeZones = [...new Set(activeZones.map(z => parseInt(z)))];
+
+        // 4. Store everything in sessionStorage
+        sessionStorage.setItem("charges_config", JSON.stringify(chargesConfigDoc.data()));
+        sessionStorage.setItem("active_zones", JSON.stringify(activeZones));
+        sessionStorage.setItem("meter_reader_profile", JSON.stringify({
+          uid: user.uid,
+          name: readerData.name || "Meter Reader",
+          employee_id: readerData.employee_id || "",
+          zone: readerData.zone || null
+        }));
+
+        // Reset login attempts
+        saveAttempts({ count: 0, firstAttemptTime: null });
+
+        // Redirect
+        loadingOverlay.style.display = "none";
+        window.location.href = "search.html";
+
+      } catch (error) {
+        loadingOverlay.style.display = "none";
+        console.error("Login Error:", error);
+        
+        let errorMsg = "Invalid username or password.";
+        if (error.code === "auth/user-disabled") {
+          errorMsg = "This user account has been disabled.";
+        } else if (error.code === "auth/too-many-requests") {
+          errorMsg = "Access to this account has been temporarily disabled due to many failed attempts.";
+        } else if (error.code === "auth/invalid-api-key" || error.code === "auth/api-key-not-valid.-please-pass-a-valid-api-key.") {
+          errorMsg = "Firebase web config has an invalid API key. Update public/firebase_config.js.";
+        } else if (error.code === "auth/configuration-not-found" || error.code === "auth/operation-not-allowed") {
+          errorMsg = "Firebase Email/Password sign-in is not enabled for this project.";
+        } else if (error.code === "auth/network-request-failed") {
+          errorMsg = "Network error while contacting Firebase Auth. Check internet access and Firebase config.";
+        }
+
+        showAlert(errorMsg, "danger");
+        recordFailedAttempt();
+      }
+    });
+
+    function recordFailedAttempt() {
+      const attempts = getAttempts();
+      if (attempts.count === 0 || !attempts.firstAttemptTime) {
+        attempts.firstAttemptTime = Date.now();
+      }
+      attempts.count += 1;
+      saveAttempts(attempts);
+      checkLockout();
+    }
+  </script>
+</body>
+</html>

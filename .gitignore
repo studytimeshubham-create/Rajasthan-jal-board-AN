@@ -1,0 +1,7 @@
+# Ignore Python cache folders
+__pycache__/
+*.pyc
+
+# Ignore your Firebase key (Replace 'firebase-key.json' with your actual filename)
+serviceAccountKey.json
+python_app/serviceAccountKey.json

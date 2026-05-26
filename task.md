@@ -1,0 +1,40 @@
+# Tasks
+
+- [x] Project Configuration & Rules
+    - [x] Create `firestore.rules`
+    - [x] Create `firebase.json`
+    - [x] Create `.firebaserc`
+- [x] HTML PDF Templates (`pdf_templates/`)
+    - [x] Create A5 `csd_sheet.html`
+    - [x] Create A5 `payment_receipt.html`
+    - [x] Create A4 `consumer_ledger.html`
+- [x] Python Admin Application (`python_app/`)
+    - [x] Implement `firebase_config.py`
+    - [x] Implement `firebase_client.py`
+    - [x] Implement `utils.py`
+    - [x] Implement `billing_engine.py`
+    - [x] Implement `main.py`
+    - [x] Implement `consumers.py`
+    - [x] Implement `meter_readers.py`
+    - [x] Implement `charges_config.py`
+    - [x] Implement `billing.py`
+    - [x] Implement `readings.py`
+    - [x] Implement `payments.py`
+    - [x] Implement `reports.py`
+    - [x] Implement `audit_log.py`
+- [x] Mobile-First Website (`public/`)
+    - [x] Implement `firebase_config.js`
+    - [x] Implement `billing-engine.js`
+    - [x] Implement `style.css`
+    - [x] Implement `index.html` (Login)
+    - [x] Implement `search.html` (Consumer search)
+    - [x] Implement `reading.html` (Reading input)
+    - [x] Implement `confirmation.html` (Post-submission edit timer)
+    - [x] Implement `correction.html` (Correction query form)
+    - [x] Implement `cannot-read.html` (Skip recording)
+    - [x] Implement `ledger.html` (12-month consumer ledger)
+    - [x] Implement `my-readings.html` (Reader logs)
+- [ ] Verification and Polish
+    - [x] Validate Python billing calculation and date addition functions
+    - [ ] Verify Tkinter app launches and loads correctly
+    - [ ] Verify website loading, login, search, and live previews
