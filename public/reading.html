@@ -122,6 +122,14 @@
                   <td>IDS Surcharge (<span id="preview-ids-pct">0</span>%)</td>
                   <td id="preview-ids-charge" class="amount">₹0.00</td>
                 </tr>
+                <tr>
+                  <td>Sewerage Tax</td>
+                  <td id="preview-sewerage-tax" class="amount">₹0.00</td>
+                </tr>
+                <tr>
+                  <td>STP Charge</td>
+                  <td id="preview-stp-charge" class="amount">₹0.00</td>
+                </tr>
                 <tr style="border-top: 1px dashed var(--border);">
                   <td>Current Cycle Bill</td>
                   <td id="preview-cycle-bill" class="amount" style="font-weight: bold;">₹0.00</td>
@@ -197,6 +205,8 @@
     const previewMeterSvc = document.getElementById("preview-meter-svc");
     const previewIdsPct = document.getElementById("preview-ids-pct");
     const previewIdsCharge = document.getElementById("preview-ids-charge");
+    const previewSewerageTax = document.getElementById("preview-sewerage-tax");
+    const previewSTPCharge = document.getElementById("preview-stp-charge");
     const previewCycleBill = document.getElementById("preview-cycle-bill");
     const previewOutstanding = document.getElementById("preview-outstanding");
     const previewCreditApplied = document.getElementById("preview-credit-applied");
@@ -449,6 +459,8 @@
       previewMeterSvc.textContent = formatCurrency(breakdown.meter_service_charge);
       previewIdsPct.textContent = breakdown.ids_rate_pct;
       previewIdsCharge.textContent = formatCurrency(breakdown.ids_charge);
+      previewSewerageTax.textContent = formatCurrency(breakdown.sewerage_tax);
+      previewSTPCharge.textContent = formatCurrency(breakdown.stp_charge);
       
       previewCycleBill.textContent = formatCurrency(breakdown.subtotal_before_lps);
       previewOutstanding.textContent = formatCurrency(breakdown.previous_outstanding);

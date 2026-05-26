@@ -91,6 +91,12 @@ def create_consumer(data: dict, admin_name: str) -> str:
         "address_landmark": data.get("address_landmark"),
         "aadhaar_phed_no": data.get("aadhaar_phed_no"),
         "apl_bpl": data.get("apl_bpl"),
+        "has_sewerage": bool(data.get("has_sewerage", False)),
+        "has_stp": bool(data.get("has_stp", False)),
+        "supply_type": data.get("supply_type", "PHED"),
+        "sewerage_sub_category": data.get("sewerage_sub_category"),
+        "rooms_count": int(data.get("rooms_count", 0)) if data.get("rooms_count") else 0,
+        "plot_area_sqm": float(data.get("plot_area_sqm", 0.0)) if data.get("plot_area_sqm") else 0.0,
         "custom_attributes": data.get("custom_attributes", {}),
         "consumer_status": data.get("consumer_status", "Active"),
         "credit_balance": float(data.get("credit_balance", 0.0)),
@@ -131,6 +137,10 @@ def update_consumer(cin_no: str, updates: dict, admin_name: str) -> None:
         updates["address_latitude"] = float(updates["address_latitude"])
     if "address_longitude" in updates and updates["address_longitude"] is not None:
         updates["address_longitude"] = float(updates["address_longitude"])
+    if "rooms_count" in updates and updates["rooms_count"] is not None:
+        updates["rooms_count"] = int(updates["rooms_count"])
+    if "plot_area_sqm" in updates and updates["plot_area_sqm"] is not None:
+        updates["plot_area_sqm"] = float(updates["plot_area_sqm"])
 
     doc_ref.update(updates)
     write_audit_log("UPDATE_CONSUMER", admin_name, f"consumers/{cin_no}", old_data, updates)
@@ -733,6 +743,18 @@ DEFAULT_CHARGES_CONFIG = {
     "meter_svc_15mm": 22.00,
     "meter_svc_20mm": 55.00,
     "meter_svc_25mm": 110.00,
+
+    # Sewerage & STP Charges
+    "sewerage_phed_supply_rate_pct": 20.0,
+    "sewerage_own_hotel_per_room": 31.25,
+    "sewerage_own_restaurant": 200.00,
+    "sewerage_own_cinema": 400.00,
+    "sewerage_own_car_service": 200.00,
+    "sewerage_own_scooter_service": 62.50,
+    "sewerage_own_other_ind_comm_per_room": 12.50,
+    "sewerage_own_domestic": 12.50,
+    "sewerage_own_house_large_per_100sqm": 6.25,
+    "stp_charge_rate_pct": 13.0,
 }
 
 def get_charges_config() -> dict:
@@ -835,6 +857,7 @@ def create_meter_reader(data: dict, admin_name: str) -> str:
         "designation": data.get("designation"),
         "address": data.get("address"),
         "zone": int(data.get("zone")) if data.get("zone") is not None else None,
+        "role": data.get("role", "Reader"),
         "is_active": True,
         "created_at": firestore.SERVER_TIMESTAMP
     }

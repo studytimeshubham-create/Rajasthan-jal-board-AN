@@ -240,7 +240,51 @@ export default function calculateBill(
     idsRatePct = 35.0;
   }
   
-  const monthlySubtotal = waterCharge + fixedCharge + meterServiceCharge;
+  // Sewerage & STP
+  let sewerageTax = 0.0;
+  const hasSewerage = Boolean(consumer.has_sewerage);
+  const supplyType = consumer.supply_type || "PHED";
+  const subCategory = consumer.sewerage_sub_category;
+
+  if (hasSewerage) {
+    if (isDomestic15mmWaiver) {
+      sewerageTax = 0.0;
+    } else if (supplyType === "PHED") {
+      if (waterCharge > 0) {
+        sewerageTax = Math.round(waterCharge * (parseFloat(rates.sewerage_phed_supply_rate_pct || 20.0) / 100.0) * 100) / 100;
+      }
+    } else {
+      if (subCategory === "Hotel") {
+        const rooms = parseInt(consumer.rooms_count || 0);
+        sewerageTax = rooms * parseFloat(rates.sewerage_own_hotel_per_room || 31.25);
+      } else if (subCategory === "Restaurant") {
+        sewerageTax = parseFloat(rates.sewerage_own_restaurant || 200.00);
+      } else if (subCategory === "Cinema") {
+        sewerageTax = parseFloat(rates.sewerage_own_cinema || 400.00);
+      } else if (subCategory === "Car/Truck Service Station") {
+        sewerageTax = parseFloat(rates.sewerage_own_car_service || 200.00);
+      } else if (subCategory === "Scooter Service Station") {
+        sewerageTax = parseFloat(rates.sewerage_own_scooter_service || 62.50);
+      } else if (subCategory === "Other Industrial/Commercial") {
+        const rooms = parseInt(consumer.rooms_count || 0);
+        sewerageTax = rooms * parseFloat(rates.sewerage_own_other_ind_comm_per_room || 12.50);
+      } else if (subCategory === "Domestic") {
+        sewerageTax = parseFloat(rates.sewerage_own_domestic || 12.50);
+      } else if (subCategory === "House > 200sqm") {
+        const area = parseFloat(consumer.plot_area_sqm || 0.0);
+        sewerageTax = (area / 100.0) * parseFloat(rates.sewerage_own_house_large_per_100sqm || 6.25);
+      }
+    }
+  }
+
+  let stpCharge = 0.0;
+  if (Boolean(consumer.has_stp)) {
+    if (waterCharge > 0) {
+      stpCharge = Math.round(waterCharge * (parseFloat(rates.stp_charge_rate_pct || 13.0) / 100.0) * 100) / 100;
+    }
+  }
+
+  const monthlySubtotal = waterCharge + fixedCharge + meterServiceCharge + sewerageTax + stpCharge;
   const idsCharge = Math.round((idsRatePct / 100.0) * monthlySubtotal * 100) / 100;
   const subtotalBeforeLps = monthlySubtotal + idsCharge;
   
@@ -282,6 +326,8 @@ export default function calculateBill(
     minimum_charge_amount: minChargeAmount,
     fixed_charge: fixedCharge,
     meter_service_charge: meterServiceCharge,
+    sewerage_tax: sewerageTax,
+    stp_charge: stpCharge,
     ids_charge: idsCharge,
     ids_rate_pct: idsRatePct,
     previous_outstanding: previousOutstanding,

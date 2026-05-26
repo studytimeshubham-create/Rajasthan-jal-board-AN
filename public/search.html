@@ -97,7 +97,7 @@
 
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
         <div id="reading-action-container"></div>
-        <button id="view-ledger-btn" class="btn btn-secondary">View Ledger</button>
+        <button id="view-ledger-btn" class="btn btn-secondary" style="display: none;">View Ledger</button>
       </div>
     </div>
   </div>
@@ -108,11 +108,11 @@
       <span class="nav-icon">🔍</span>
       <span>Search</span>
     </a>
-    <a href="ledger.html" class="nav-item">
+    <a href="ledger.html" class="nav-item" id="nav-ledger">
       <span class="nav-icon">📖</span>
       <span>Ledger</span>
     </a>
-    <a href="my-readings.html" class="nav-item">
+    <a href="my-readings.html" class="nav-item" id="nav-my-readings">
       <span class="nav-icon">📋</span>
       <span>My Readings</span>
     </a>
@@ -142,6 +142,7 @@
     const statusAlertContainer = document.getElementById("status-alert-container");
 
     let currentConsumer = null;
+    let currentUserProfile = null;
 
     // Check Auth State and load active zones
     onAuthStateChanged(auth, async (user) => {
@@ -152,8 +153,12 @@
       
       const profileStr = sessionStorage.getItem("meter_reader_profile");
       if (profileStr) {
-        const profile = JSON.parse(profileStr);
-        document.getElementById("header-user-name").textContent = profile.name;
+        currentUserProfile = JSON.parse(profileStr);
+        document.getElementById("header-user-name").textContent = currentUserProfile.name;
+        if (currentUserProfile.role === "Cashier") {
+            document.getElementById("nav-my-readings").style.display = "none";
+            document.getElementById("nav-ledger").style.display = "none";
+        }
       } else {
         // Fallback if session storage was cleared
         loadingOverlay.style.display = "flex";
@@ -161,12 +166,14 @@
           const docSnap = await getDoc(doc(db, "meter_readers", user.uid));
           if (docSnap.exists()) {
             const data = docSnap.data();
-            sessionStorage.setItem("meter_reader_profile", JSON.stringify({
+            currentUserProfile = {
               uid: user.uid,
               name: data.name || "Meter Reader",
               employee_id: data.employee_id || "",
-              zone: data.zone || null
-            }));
+              zone: data.zone || null,
+              role: data.role || "Reader"
+            };
+            sessionStorage.setItem("meter_reader_profile", JSON.stringify(currentUserProfile));
             document.getElementById("header-user-name").textContent = data.name;
           }
         } catch(e) {
@@ -284,6 +291,43 @@
         document.getElementById("res-last-reading").textContent = formatKL(currentConsumer.last_reading || currentConsumer.initial_meter_reading || 0);
         document.getElementById("res-status").textContent = currentConsumer.consumer_status || "—";
         
+        const isCashier = currentUserProfile && currentUserProfile.role === "Cashier";
+        if (isCashier) {
+            // Append extra data for cashiers
+            const infoPanel = document.querySelector(".info-panel");
+            let extraData = `
+                <div>
+                    <span class="info-label">Has Sewerage?</span>
+                    <span class="info-value">${currentConsumer.has_sewerage ? "Yes" : "No"}</span>
+                </div>
+            `;
+            if (currentConsumer.has_sewerage) {
+                extraData += `
+                <div>
+                    <span class="info-label">Sewerage Sub-Cat</span>
+                    <span class="info-value">${currentConsumer.sewerage_sub_category || "Standard"}</span>
+                </div>
+                `;
+                if (currentConsumer.sewerage_sub_category === "Hotel" || currentConsumer.sewerage_sub_category === "Other Industrial/Commercial") {
+                    extraData += `
+                    <div>
+                        <span class="info-label">Rooms Count</span>
+                        <span class="info-value">${currentConsumer.rooms_count || 0}</span>
+                    </div>
+                    `;
+                }
+                if (currentConsumer.sewerage_sub_category === "House > 200sqm") {
+                    extraData += `
+                    <div>
+                        <span class="info-label">Plot Area</span>
+                        <span class="info-value">${currentConsumer.plot_area_sqm || 0} sqm</span>
+                    </div>
+                    `;
+                }
+            }
+            infoPanel.insertAdjacentHTML('beforeend', extraData);
+        }
+
         const addressText = [
           currentConsumer.address_area_location,
           currentConsumer.address_landmark,
@@ -308,20 +352,31 @@
         const isZoneActive = activeZones.includes(parseInt(currentConsumer.zone));
         const actionContainer = document.getElementById("reading-action-container");
 
-        if (isZoneActive) {
-          actionContainer.innerHTML = `
-            <button id="enter-reading-btn" class="btn btn-primary">Enter Reading</button>
-          `;
-          document.getElementById("enter-reading-btn").addEventListener("click", () => {
-            window.location.href = `reading.html?cin=${currentConsumer.cin_no}`;
-          });
+        if (isCashier) {
+            document.getElementById("view-ledger-btn").style.display = "none";
+            actionContainer.innerHTML = `
+                <button id="cash-in-btn" class="btn btn-success">💰 Cash In Payment</button>
+            `;
+            document.getElementById("cash-in-btn").addEventListener("click", () => {
+                window.location.href = `cash-in.html?cin=${currentConsumer.cin_no}`;
+            });
         } else {
-          actionContainer.innerHTML = `
-            <button class="btn zone-warning" disabled>No Active Cycle — Zone ${currentConsumer.zone}</button>
-            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 4px;">
-              Reading entry is only available when a billing cycle is active for this zone.
-            </p>
-          `;
+            document.getElementById("view-ledger-btn").style.display = "block";
+            if (isZoneActive) {
+                actionContainer.innerHTML = `
+                    <button id="enter-reading-btn" class="btn btn-primary">📖 Enter Reading</button>
+                `;
+                document.getElementById("enter-reading-btn").addEventListener("click", () => {
+                    window.location.href = `reading.html?cin=${currentConsumer.cin_no}`;
+                });
+            } else {
+                actionContainer.innerHTML = `
+                    <button class="btn zone-warning" disabled>No Active Cycle — Zone ${currentConsumer.zone}</button>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 4px;">
+                        Reading entry is only available when a billing cycle is active for this zone.
+                    </p>
+                `;
+            }
         }
 
         resultsPanel.style.display = "block";

@@ -93,6 +93,14 @@
                 <td id="breakdown-meter-svc" class="amount">₹0.00</td>
               </tr>
               <tr>
+                <td>Sewerage Tax</td>
+                <td id="breakdown-sewerage-tax" class="amount">₹0.00</td>
+              </tr>
+              <tr>
+                <td>STP Charge</td>
+                <td id="breakdown-stp-charge" class="amount">₹0.00</td>
+              </tr>
+              <tr>
                 <td>IDS Surcharge (<span id="breakdown-ids-pct">0</span>%)</td>
                 <td id="breakdown-ids-charge" class="amount">₹0.00</td>
               </tr>
@@ -175,6 +183,8 @@
     const slabRows = document.getElementById("slab-breakdown-rows");
     const breakdownFixed = document.getElementById("breakdown-fixed");
     const breakdownMeterSvc = document.getElementById("breakdown-meter-svc");
+    const breakdownSewerageTax = document.getElementById("breakdown-sewerage-tax");
+    const breakdownSTPCharge = document.getElementById("breakdown-stp-charge");
     const breakdownIdsPct = document.getElementById("breakdown-ids-pct");
     const breakdownIdsCharge = document.getElementById("breakdown-ids-charge");
     const breakdownSubtotal = document.getElementById("breakdown-subtotal");
@@ -289,6 +299,8 @@
 
         breakdownFixed.textContent = formatCurrency(breakdown.fixed_charge || 0);
         breakdownMeterSvc.textContent = formatCurrency(breakdown.meter_service_charge || 0);
+        breakdownSewerageTax.textContent = formatCurrency(breakdown.sewerage_tax || 0);
+        breakdownSTPCharge.textContent = formatCurrency(breakdown.stp_charge || 0);
         breakdownIdsPct.textContent = breakdown.ids_rate_pct || 0;
         breakdownIdsCharge.textContent = formatCurrency(breakdown.ids_charge || 0);
         breakdownSubtotal.textContent = formatCurrency(breakdown.subtotal_before_lps || 0);

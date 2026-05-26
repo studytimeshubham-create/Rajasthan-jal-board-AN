@@ -27,12 +27,14 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
     tree_frame = ttk.Frame(left_panel)
     tree_frame.pack(fill="both", expand=True)
     
-    tree = ttk.Treeview(tree_frame, columns=("employee_id", "name", "zone", "status"), show="headings")
+    tree = ttk.Treeview(tree_frame, columns=("employee_id", "role", "name", "zone", "status"), show="headings")
     tree.heading("employee_id", text="Emp ID")
+    tree.heading("role", text="Role")
     tree.heading("name", text="Name")
     tree.heading("zone", text="Zone")
     tree.heading("status", text="Status")
     tree.column("employee_id", width=80, anchor="center")
+    tree.column("role", width=70, anchor="center")
     tree.column("name", width=150, anchor="w")
     tree.column("zone", width=50, anchor="center")
     tree.column("status", width=70, anchor="center")
@@ -62,7 +64,7 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
             for r in readers:
                 status = "Active" if r.get("is_active", True) else "Inactive"
                 zone = str(r.get("zone")) if r.get("zone") is not None else "All"
-                tree.insert("", "end", values=(r["employee_id"], r["name"], zone, status), iid=r["uid"])
+                tree.insert("", "end", values=(r["employee_id"], r.get("role", "Reader"), r["name"], zone, status), iid=r["uid"])
             clear_editor()
             
         utils.run_in_thread(fetch, callback=done, widget=frame)
@@ -115,6 +117,8 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
         
         zone_val = str(reader["zone"]) if reader.get("zone") is not None else ""
         fields["zone"].set(zone_val)
+
+        fields["role"].set(reader.get("role", "Reader"))
         
         # Configure buttons status
         deactivate_btn.config(state="normal")
@@ -156,6 +160,11 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
     fields["zone"] = ttk.Combobox(right_panel, values=[""] + [str(z) for z in utils.ZONE_RANGE], state="readonly", width=8)
     fields["zone"].grid(row=row_idx, column=1, sticky="w", pady=5)
     row_idx += 1
+
+    ttk.Label(right_panel, text="System Role:*").grid(row=row_idx, column=0, sticky="w", pady=5)
+    fields["role"] = ttk.Combobox(right_panel, values=utils.READER_ROLE_OPTIONS, state="readonly", width=15)
+    fields["role"].grid(row=row_idx, column=1, sticky="w", pady=5)
+    row_idx += 1
     
     # Save edits action
     def save_edits():
@@ -175,7 +184,8 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
             "phone_number": fields["phone_number"].get().strip() or None,
             "designation": fields["designation"].get().strip() or None,
             "address": fields["address"].get().strip() or None,
-            "zone": int(zone_str) if zone_str else None
+            "zone": int(zone_str) if zone_str else None,
+            "role": fields["role"].get()
         }
         
         def save():
@@ -338,6 +348,12 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
         d_fields["zone"] = ttk.Combobox(f_dlg, values=[""] + [str(z) for z in utils.ZONE_RANGE], state="readonly", width=8)
         d_fields["zone"].grid(row=r, column=1, sticky="w", pady=4)
         r += 1
+
+        ttk.Label(f_dlg, text="System Role:*").grid(row=r, column=0, sticky="w", pady=4)
+        d_fields["role"] = ttk.Combobox(f_dlg, values=utils.READER_ROLE_OPTIONS, state="readonly", width=15)
+        d_fields["role"].grid(row=r, column=1, sticky="w", pady=4)
+        d_fields["role"].set("Reader")
+        r += 1
         
         def save():
             name = d_fields["name"].get().strip()
@@ -358,7 +374,8 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
                 "phone_number": d_fields["phone"].get().strip() or None,
                 "designation": d_fields["desig"].get().strip() or None,
                 "address": d_fields["addr"].get().strip() or None,
-                "zone": int(zone_val) if zone_val else None
+                "zone": int(zone_val) if zone_val else None,
+                "role": d_fields["role"].get()
             }
             
             def run():
