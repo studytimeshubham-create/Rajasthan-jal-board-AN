@@ -16,6 +16,19 @@ CATEGORY_OPTIONS = ["Domestic", "Non-Domestic", "Industrial"]
 APL_BPL_OPTIONS = ["APL", "BPL"]
 ZONE_RANGE = range(1, 21)  # zones 1–20
 
+READER_ROLE_OPTIONS = ["Reader", "Cashier"]
+SUPPLY_TYPE_OPTIONS = ["PHED", "Own", "Mixed"]
+SEWERAGE_SUB_CATEGORY_OPTIONS = [
+    "Hotel",
+    "Restaurant",
+    "Cinema",
+    "Car/Truck Service Station",
+    "Scooter Service Station",
+    "Other Industrial/Commercial",
+    "Domestic",
+    "House > 200sqm"
+]
+
 def format_currency(amount: float) -> str:
     """Formats amount to Indian Rupees format, e.g. ₹1,234.56."""
     try:

@@ -144,6 +144,55 @@ def calculate_bill(
     monthly_subtotal = water_charge + fixed_charge + meter_service_charge
     ids_charge = round((ids_rate_pct / 100.0) * monthly_subtotal, 2)
     
+    # 5.1 Sewerage Tax (Clause 14)
+    # Sewerage Tax only applies if water charges are chargeable (water_charge > 0)
+    # OR if it's Own/Mixed supply (as per Clause 14 Mixed is treated as Own)
+    sewerage_tax = 0.0
+    has_sewerage = bool(consumer.get("has_sewerage", False))
+    supply_type = consumer.get("supply_type", "PHED")
+    sub_category = consumer.get("sewerage_sub_category")
+
+    if has_sewerage:
+        # Clause 14 Note: If water charges are not chargeable, Sewerage Tax will also not be chargeable.
+        # This applies specifically to the Domestic 15mm <= 15 KL waiver.
+        if is_domestic_15mm_waiver:
+            sewerage_tax = 0.0
+        elif supply_type == "PHED":
+            # 20% of water charges
+            if water_charge > 0:
+                sewerage_tax = round(water_charge * (float(rates.get("sewerage_phed_supply_rate_pct", 20.0)) / 100.0), 2)
+        else:
+            # Own or Mixed Supply (Treated as Own)
+            if sub_category == "Hotel":
+                rooms = int(consumer.get("rooms_count", 0))
+                sewerage_tax = rooms * float(rates.get("sewerage_own_hotel_per_room", 31.25))
+            elif sub_category == "Restaurant":
+                sewerage_tax = float(rates.get("sewerage_own_restaurant", 200.00))
+            elif sub_category == "Cinema":
+                sewerage_tax = float(rates.get("sewerage_own_cinema", 400.00))
+            elif sub_category == "Car/Truck Service Station":
+                sewerage_tax = float(rates.get("sewerage_own_car_service", 200.00))
+            elif sub_category == "Scooter Service Station":
+                sewerage_tax = float(rates.get("sewerage_own_scooter_service", 62.50))
+            elif sub_category == "Other Industrial/Commercial":
+                rooms = int(consumer.get("rooms_count", 0))
+                sewerage_tax = rooms * float(rates.get("sewerage_own_other_ind_comm_per_room", 12.50))
+            elif sub_category == "Domestic":
+                sewerage_tax = float(rates.get("sewerage_own_domestic", 12.50))
+            elif sub_category == "House > 200sqm":
+                area = float(consumer.get("plot_area_sqm", 0.0))
+                sewerage_tax = (area / 100.0) * float(rates.get("sewerage_own_house_large_per_100sqm", 6.25))
+
+    # 5.2 Sewerage Treatment Plant (STP) Charges (Clause 15)
+    # 13% of water charges
+    stp_charge = 0.0
+    if bool(consumer.get("has_stp", False)):
+        if water_charge > 0:
+            stp_charge = round(water_charge * (float(rates.get("stp_charge_rate_pct", 13.0)) / 100.0), 2)
+
+    monthly_subtotal = water_charge + fixed_charge + meter_service_charge + sewerage_tax + stp_charge
+    ids_charge = round((ids_rate_pct / 100.0) * monthly_subtotal, 2)
+
     subtotal_before_lps = monthly_subtotal + ids_charge
     
     # 6. Apply credit balance to new monthly charges
@@ -189,6 +238,8 @@ def calculate_bill(
         "minimum_charge_amount": min_charge_amount,
         "fixed_charge": fixed_charge,
         "meter_service_charge": meter_service_charge,
+        "sewerage_tax": sewerage_tax,
+        "stp_charge": stp_charge,
         "ids_charge": ids_charge,
         "ids_rate_pct": ids_rate_pct,
         "previous_outstanding": previous_outstanding,

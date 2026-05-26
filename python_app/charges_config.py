@@ -81,6 +81,18 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
         print_rate("Meter Service (15mm)", f"₹{rates.get('meter_svc_15mm', 22.00):.2f} / month")
         print_rate("Meter Service (20mm)", f"₹{rates.get('meter_svc_20mm', 55.00):.2f} / month")
         print_rate("Meter Service (25mm)", f"₹{rates.get('meter_svc_25mm', 110.00):.2f} / month")
+
+        print_title("Sewerage & STP Charges")
+        print_rate("PHED Sewerage Rate (%)", f"{rates.get('sewerage_phed_supply_rate_pct', 20.0):.1f} %")
+        print_rate("Own Supply Hotel (per room)", f"₹{rates.get('sewerage_own_hotel_per_room', 31.25):.2f}")
+        print_rate("Own Supply Restaurant (fixed)", f"₹{rates.get('sewerage_own_restaurant', 200.00):.2f}")
+        print_rate("Own Supply Cinema (fixed)", f"₹{rates.get('sewerage_own_cinema', 400.00):.2f}")
+        print_rate("Own Supply Car Svc (fixed)", f"₹{rates.get('sewerage_own_car_service', 200.00):.2f}")
+        print_rate("Own Supply Scooter Svc (fixed)", f"₹{rates.get('sewerage_own_scooter_service', 62.50):.2f}")
+        print_rate("Own Supply Other Ind (per room)", f"₹{rates.get('sewerage_own_other_ind_comm_per_room', 12.50):.2f}")
+        print_rate("Own Supply Domestic (fixed)", f"₹{rates.get('sewerage_own_domestic', 12.50):.2f}")
+        print_rate("Own Supply Large Plot (per 100sqm)", f"₹{rates.get('sewerage_own_house_large_per_100sqm', 6.25):.2f}")
+        print_rate("STP Charge Rate (%)", f"{rates.get('stp_charge_rate_pct', 13.0):.1f} %")
         
         print_title("Bulk Connections (>25mm)")
         print_rate("Bulk Water (Domestic)", f"₹{rates.get('bulk_domestic_rate', 25.00):.2f} / KL")
@@ -180,7 +192,18 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
             
             ("bulk_domestic_rate", "Bulk Water Rate - Dom (₹/KL)"),
             ("bulk_nondomestic_rate", "Bulk Water Rate - Non-Dom (₹/KL)"),
-            ("bulk_industrial_rate", "Bulk Water Rate - Ind (₹/KL)")
+            ("bulk_industrial_rate", "Bulk Water Rate - Ind (₹/KL)"),
+
+            ("sewerage_phed_supply_rate_pct", "PHED Sewerage Rate (%)"),
+            ("sewerage_own_hotel_per_room", "Own Supply Hotel (per room)"),
+            ("sewerage_own_restaurant", "Own Supply Restaurant (fixed)"),
+            ("sewerage_own_cinema", "Own Supply Cinema (fixed)"),
+            ("sewerage_own_car_service", "Own Supply Car Svc (fixed)"),
+            ("sewerage_own_scooter_service", "Own Supply Scooter Svc (fixed)"),
+            ("sewerage_own_other_ind_comm_per_room", "Own Supply Other Ind (per room)"),
+            ("sewerage_own_domestic", "Own Supply Domestic (fixed)"),
+            ("sewerage_own_house_large_per_100sqm", "Own Supply Large Plot (per 100sqm)"),
+            ("stp_charge_rate_pct", "STP Charge Rate (%)")
         ]
 
         for size in ("40mm", "50mm", "80mm", "100mm", "150mm"):
@@ -404,6 +427,8 @@ def get_frame(parent, fc, utils, be, admin) -> ttk.Frame:
             
         breakdown_text.insert("end", f"Fixed Renovation Charge   : {utils.format_currency(res['fixed_charge'])}\n")
         breakdown_text.insert("end", f"Meter Service Charge      : {utils.format_currency(res['meter_service_charge'])}\n")
+        breakdown_text.insert("end", f"Sewerage Tax Amount       : {utils.format_currency(res['sewerage_tax'])}\n")
+        breakdown_text.insert("end", f"STP Charge Amount         : {utils.format_currency(res['stp_charge'])}\n")
         breakdown_text.insert("end", f"IDS Surcharge ({res['ids_rate_pct']}% Rate)  : {utils.format_currency(res['ids_charge'])}\n")
         breakdown_text.insert("end", f"Subtotal before LPS       : {utils.format_currency(res['subtotal_before_lps'])}\n")
         breakdown_text.insert("end", f"Late Payment Surcharge    : {utils.format_currency(res['lps_amount'])} (Type: {res['lps_type']})\n")

@@ -524,8 +524,43 @@ def build_add_tab(tab, fc, utils, be, admin, notebook):
     fields["consumer_status"].grid(row=16, column=1, sticky="w", pady=5)
     fields["consumer_status"].set("Active")
 
+    # Sewerage & STP Fields
+    cur_row = 17
+    ttk.Label(f, text="Has Sewerage?").grid(row=cur_row, column=0, sticky="w", pady=5)
+    fields["has_sewerage"] = tk.BooleanVar(value=False)
+    chk_sew = ttk.Checkbutton(f, variable=fields["has_sewerage"])
+    chk_sew.grid(row=cur_row, column=1, sticky="w", pady=5)
+    cur_row += 1
+
+    ttk.Label(f, text="Supply Type:").grid(row=cur_row, column=0, sticky="w", pady=5)
+    fields["supply_type"] = ttk.Combobox(f, values=utils.SUPPLY_TYPE_OPTIONS, state="readonly", width=10)
+    fields["supply_type"].grid(row=cur_row, column=1, sticky="w", pady=5)
+    fields["supply_type"].set("PHED")
+    cur_row += 1
+
+    ttk.Label(f, text="Sub-Category:").grid(row=cur_row, column=0, sticky="w", pady=5)
+    fields["sewerage_sub_category"] = ttk.Combobox(f, values=utils.SEWERAGE_SUB_CATEGORY_OPTIONS, state="readonly", width=25)
+    fields["sewerage_sub_category"].grid(row=cur_row, column=1, sticky="w", pady=5)
+    cur_row += 1
+
+    ttk.Label(f, text="Rooms Count:").grid(row=cur_row, column=0, sticky="w", pady=5)
+    fields["rooms_count"] = ttk.Entry(f, width=10)
+    fields["rooms_count"].grid(row=cur_row, column=1, sticky="w", pady=5)
+    cur_row += 1
+
+    ttk.Label(f, text="Plot Area (sqm):").grid(row=cur_row, column=0, sticky="w", pady=5)
+    fields["plot_area_sqm"] = ttk.Entry(f, width=10)
+    fields["plot_area_sqm"].grid(row=cur_row, column=1, sticky="w", pady=5)
+    cur_row += 1
+
+    ttk.Label(f, text="Has STP?").grid(row=cur_row, column=0, sticky="w", pady=5)
+    fields["has_stp"] = tk.BooleanVar(value=False)
+    chk_stp = ttk.Checkbutton(f, variable=fields["has_stp"])
+    chk_stp.grid(row=cur_row, column=1, sticky="w", pady=5)
+    cur_row += 1
+
     # Custom Attributes Table inside Add Tab
-    ttk.Label(f, text="Custom Attributes:", font=("Segoe UI", 10, "bold")).grid(row=17, column=0, sticky="nw", pady=10)
+    ttk.Label(f, text="Custom Attributes:", font=("Segoe UI", 10, "bold")).grid(row=cur_row, column=0, sticky="nw", pady=10)
     attr_frame = ttk.Frame(f)
     attr_frame.grid(row=17, column=1, sticky="w", pady=10)
     
@@ -613,6 +648,12 @@ def build_add_tab(tab, fc, utils, be, admin, notebook):
             "address_area_location": fields["address_area_location"].get().strip() or None,
             "address_landmark": fields["address_landmark"].get().strip() or None,
             "consumer_status": fields["consumer_status"].get(),
+            "has_sewerage": fields["has_sewerage"].get(),
+            "supply_type": fields["supply_type"].get(),
+            "sewerage_sub_category": fields["sewerage_sub_category"].get() if fields["has_sewerage"].get() else None,
+            "rooms_count": int(fields["rooms_count"].get() or 0) if fields["rooms_count"].get() else 0,
+            "plot_area_sqm": float(fields["plot_area_sqm"].get() or 0.0) if fields["plot_area_sqm"].get() else 0.0,
+            "has_stp": fields["has_stp"].get(),
             "custom_attributes": custom_attrs,
             "credit_balance": 0.0,
             "outstanding_balance": 0.0,
@@ -658,7 +699,7 @@ def build_add_tab(tab, fc, utils, be, admin, notebook):
             
         utils.run_in_thread(save, callback=success, error_callback=fail, widget=tab)
 
-    ttk.Button(f, text="💾 Save Profile", command=save_consumer).grid(row=18, column=1, sticky="w", pady=20)
+    ttk.Button(f, text="💾 Save Profile", command=save_consumer).grid(row=cur_row+1, column=1, sticky="w", pady=20)
 
 def show_edit_consumer_dialog(c, fc, utils, admin, parent_popup, success_callback):
     edit_win = tk.Toplevel(parent_popup)
@@ -742,6 +783,42 @@ def show_edit_consumer_dialog(c, fc, utils, admin, parent_popup, success_callbac
     fields["address_landmark"].grid(row=13, column=1, sticky="w", pady=4)
     fields["address_landmark"].insert(0, c.get("address_landmark", "") or "")
 
+    # Sewerage & STP Edit Fields
+    row_idx_edit = 14
+    ttk.Label(f, text="Has Sewerage?").grid(row=row_idx_edit, column=0, sticky="w", pady=4)
+    fields["has_sewerage"] = tk.BooleanVar(value=bool(c.get("has_sewerage", False)))
+    ttk.Checkbutton(f, variable=fields["has_sewerage"]).grid(row=row_idx_edit, column=1, sticky="w", pady=4)
+    row_idx_edit += 1
+
+    ttk.Label(f, text="Supply Type:").grid(row=row_idx_edit, column=0, sticky="w", pady=4)
+    fields["supply_type"] = ttk.Combobox(f, values=utils.SUPPLY_TYPE_OPTIONS, state="readonly", width=10)
+    fields["supply_type"].grid(row=row_idx_edit, column=1, sticky="w", pady=4)
+    fields["supply_type"].set(c.get("supply_type", "PHED"))
+    row_idx_edit += 1
+
+    ttk.Label(f, text="Sub-Category:").grid(row=row_idx_edit, column=0, sticky="w", pady=4)
+    fields["sewerage_sub_category"] = ttk.Combobox(f, values=utils.SEWERAGE_SUB_CATEGORY_OPTIONS, state="readonly", width=25)
+    fields["sewerage_sub_category"].grid(row=row_idx_edit, column=1, sticky="w", pady=4)
+    fields["sewerage_sub_category"].set(c.get("sewerage_sub_category", ""))
+    row_idx_edit += 1
+
+    ttk.Label(f, text="Rooms Count:").grid(row=row_idx_edit, column=0, sticky="w", pady=4)
+    fields["rooms_count"] = ttk.Entry(f, width=10)
+    fields["rooms_count"].grid(row=row_idx_edit, column=1, sticky="w", pady=4)
+    fields["rooms_count"].insert(0, str(c.get("rooms_count", 0)))
+    row_idx_edit += 1
+
+    ttk.Label(f, text="Plot Area (sqm):").grid(row=row_idx_edit, column=0, sticky="w", pady=4)
+    fields["plot_area_sqm"] = ttk.Entry(f, width=10)
+    fields["plot_area_sqm"].grid(row=row_idx_edit, column=1, sticky="w", pady=4)
+    fields["plot_area_sqm"].insert(0, str(c.get("plot_area_sqm", 0.0)))
+    row_idx_edit += 1
+
+    ttk.Label(f, text="Has STP?").grid(row=row_idx_edit, column=0, sticky="w", pady=4)
+    fields["has_stp"] = tk.BooleanVar(value=bool(c.get("has_stp", False)))
+    ttk.Checkbutton(f, variable=fields["has_stp"]).grid(row=row_idx_edit, column=1, sticky="w", pady=4)
+    row_idx_edit += 1
+
     def save_edits():
         name = fields["name"].get().strip()
         zone = fields["zone"].get()
@@ -769,7 +846,13 @@ def show_edit_consumer_dialog(c, fc, utils, admin, parent_popup, success_callbac
             "address_longitude": float(long_str) if long_str else None,
             "address_pin_code": int(pin_str) if pin_str else None,
             "address_area_location": fields["address_area_location"].get().strip() or None,
-            "address_landmark": fields["address_landmark"].get().strip() or None
+            "address_landmark": fields["address_landmark"].get().strip() or None,
+            "has_sewerage": fields["has_sewerage"].get(),
+            "supply_type": fields["supply_type"].get(),
+            "sewerage_sub_category": fields["sewerage_sub_category"].get() if fields["has_sewerage"].get() else None,
+            "rooms_count": int(fields["rooms_count"].get() or 0) if fields["rooms_count"].get() else 0,
+            "plot_area_sqm": float(fields["plot_area_sqm"].get() or 0.0) if fields["plot_area_sqm"].get() else 0.0,
+            "has_stp": fields["has_stp"].get()
         }
         
         def save():
@@ -785,7 +868,7 @@ def show_edit_consumer_dialog(c, fc, utils, admin, parent_popup, success_callbac
             
         utils.run_in_thread(save, callback=done, error_callback=fail, widget=edit_win)
 
-    ttk.Button(f, text="💾 Save Changes", command=save_edits).grid(row=14, column=1, sticky="w", pady=15)
+    ttk.Button(f, text="💾 Save Changes", command=save_edits).grid(row=row_idx_edit, column=1, sticky="w", pady=15)
 
 # ----------------------------------------------------
 # TAB 3: Bulk Import CSD
